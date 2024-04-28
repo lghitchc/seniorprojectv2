@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="greeting"></div>
+    <div id="chat">
+        <h2>Chatting with: <span id="recipientUsername"></span></h2>
+        <ul id="messages"></ul>
+        <input type="text" id="messageInput">
+        <button id="sendButton">Send</button>
+    </div>
+
+    <footer><a href="friendships.html">Back to Friendships</a></footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const greetingElement = document.getElementById('greeting');
+            greetingElement.textContent = `Hello, ${sessionStorage.getItem('username') || 'Guest'}!`;
+            const queryString = window.location.search;
+            const urlParams = new URLSearchParams(queryString);
+            let senderUsername = urlParams.get('sender'); // Extract sender's username from query parameter
+            let receiverUsername = urlParams.get('friend');
+
+            console.log('Sender Username:', senderUsername);
+            console.log('Receiver Username:', receiverUsername);
+
+            if (!receiverUsername) {
+                console.error('Receiver username is null');
+                receiverUsername = 'Unknown';
+                // Handle the case where receiverUsername is null, such as displaying an error message to the user
+            } else {
+                const messageInput = document.getElementById('messageInput');
+                const sendButton = document.getElementById('sendButton');
+                const messagesList = document.getElementById('messages');
+                const recipientUsernameElement = document.getElementById('recipientUsername');
+                let receiverId; // Define receiverId variable
+                let senderId; // Define senderId variable
+
+                // Function to fetch messages from backend and update UI
+                const fetchMessages = async () => {
+                    try {
+                        const username = sessionStorage.getItem('username'); // Retrieve username from sessionStorage
+                        const response = await fetch(`/api/messages?senderUsername=${username}&receiverUsername=${receiverUsername}`);
+                        const data = await response.json();
+                        if (data.success) {
+                            messagesList.innerHTML = ''; // Clear previous messages
+                            data.messages.forEach(message => {
+                                const li = document.createElement('li');
+                                li.textContent = `${message.senderUsername}: ${message.content}`;
+                                messagesList.appendChild(li);
+                            });
+                        } else {
+                            console.error('Failed to fetch messages:', data.error);
+                        }
+                    } catch (error) {
+                        console.error('Error fetching messages:', error);
+                    }
+                };
+
+                // Define function to fetch the sender's ID from the server
+                async function fetchSenderId(senderUsername) {
+                    try {
+                        const response = await fetch(`/api/get-sender-id?username=${senderUsername}`);
+                        const data = await response.json();
+                        if (data.success) {
+                            senderId = data.senderId;
+                        } else {
+                            console.error('Failed to fetch sender ID:', data.error);
+                        }
+                    } catch (error) {
+                        console.error('Error fetching sender ID:', error);
+                    }
+                }
+
+                // Function to fetch the receiver's ID from the server
+                async function fetchReceiverId(receiverUsername) {
+                    try {
+                        console.log('Fetching receiver ID...');
+                        const response = await fetch(`/api/get-receiver-id?receiverUsername=${receiverUsername}`);
+                        const data = await response.json();
+                        if (data.success) {
+                            receiverId = data.receiverId; // Assigned receiverId
+                            console.log('Receiver ID fetched successfully:', receiverId);
+                            document.getElementById('recipientUsername').textContent = receiverUsername;
+                            fetchMessages(); // Fetch messages once receiverId is fetched
+                        } else {
+                            console.error('Failed to fetch receiver ID:', data.error);
+                        }
+                    } catch (error) {
+                        console.error('Error fetching receiver ID:', error);
+                    }
+                }
+
+                // Fetch receiver's ID when the document is loaded
+                fetchReceiverId(receiverUsername)
+                    .then(() => {
+                        if (senderUsername) {
+                            // Fetch sender's ID only if senderUsername is available
+                            return fetchSenderId(senderUsername);
+                        } else {
+                            console.error('Sender username is null');
+                            throw new Error('Sender username is null');
+                        }
+                    })
+                    .then(() => {
+                        // Fetch messages initially and then every 30 seconds
+                        setInterval(fetchMessages, 30000);
+
+                        // Function to send a message
+                        const sendMessage = async () => {
+                            const content = messageInput.value.trim();
+                            if (content && receiverId && senderId) {
+                                console.log('Sending message...');
+                                console.log('Sender Username:', senderUsername);
+                                console.log('Receiver Username:', receiverUsername);
+                                console.log('Sender ID:', senderId);
+                                console.log('Receiver ID:', receiverId); // Ensure receiverId is set
+                                console.log('Content:', content); // Log the content being sent
+                                try {
+                                    //POST request to send message
+                                    await fetch('/api/send-message', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json'
+                                        },
+                                        body: JSON.stringify({ senderUsername, receiverUsername, content })
+                                    });
+                                    messageInput.value = ''; // Clear input after sending message
+                                    fetchMessages(); // Fetch messages to update UI
+                                } catch (error) {
+                                    console.error('Error sending message:', error);
+                                }
+                            } else {
+                                console.error('Sender or receiver ID is not defined'); // Log an error if senderId or receiverId is not defined
+                            }
+                        };
+
+                        // Event listener for send button click
+                        sendButton.addEventListener('click', sendMessage);
+                    })
+                    .catch(error => console.error('Error fetching sender or receiver ID:', error));
+            }
+        });
+    </script>
+</body>
+</html>

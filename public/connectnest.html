@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConnectNest - Find Friends</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Find Friends on ConnectNest</h1>
+    </header>
+    <div id="greeting"></div>
+    <main id="card-container">
+        <!-- Friend card will be dynamically added here -->
+    </main>
+    <footer>
+        <a href="friendships.html">View Friendships</a>
+        <a href="profile.html">Go to Profile</a>
+        <p>&copy; 2024 ConnectNest</p>
+    </footer>
+
+    <!-- JavaScript code to fetch and display data -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOMContentLoaded event fired.");
+            console.log(sessionStorage.getItem('username')); // Check if username is retrieved correctly
+            const greetingElement = document.getElementById('greeting');
+            greetingElement.textContent = `Hello, ${sessionStorage.getItem('username') || 'Guest'}!`;
+    
+            fetchNextUser().catch(error => {
+                console.error('Error fetching next user:', error);
+                alert('Error fetching user data. Please try again later.');
+            });
+    
+            let currentUserIndex = 0; // Initialize index to keep track of current user
+            let userData = []; // Array to store fetched user data
+            let displayedUserIds = []; // Array to store IDs of displayed users
+    
+    
+            // Function to fetch data for the next user and update DOM
+            async function fetchNextUser() {
+    try {
+        const response = await fetch('/api/users');
+        if (!response.ok) {
+            throw new Error('Failed to fetch user data');
+        }
+        const jsonData = await response.json();
+
+        if (jsonData && jsonData.length > 0) {
+            const loggedInUserId = sessionStorage.getItem('userID');
+            const likerId = sessionStorage.getItem('userID');
+
+            let filteredUserData = jsonData.filter(user => !displayedUserIds.includes(user.userID) && !sessionStorage.getItem(`likedOrPassed_${likerId}_${user.userID}`));
+            filteredUserData = filteredUserData.filter(user => user.userID !== parseInt(loggedInUserId));
+
+            if (filteredUserData.length > 0) {
+                if (displayedUserIds.length === 0) {
+                    displayedUserIds = filteredUserData.map(user => user.userID);
+                }
+
+                userData = filteredUserData;
+                renderUserCard();
+            } else {
+                document.getElementById('card-container').textContent = 'No other users found.';
+            }
+        } else {
+            document.getElementById('card-container').textContent = 'No users found.';
+        }
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        alert('Error fetching user data. Please check your internet connection and try again.');
+    }
+}
+    
+           // Function to render card for a user
+function renderUserCard(loggedInUserId) {
+    const user = userData[currentUserIndex];
+
+    // Check if user data exists and is valid
+    if (!user) {
+        console.error('User data is undefined or invalid');
+        return;
+    }
+
+    const cardContainer = document.getElementById('card-container');
+    if (!cardContainer) {
+        console.error("Card container not found.");
+        return;
+    }
+    // console.log('Profile Image:', user.image); // Log profile picture path
+    cardContainer.innerHTML = ''; // Clear previous card
+
+    const card = document.createElement('div');
+    card.classList.add('card');
+    card.innerHTML = `
+        <img src="${user.image || 'placeholder.jpg'}" alt="Profile Image"> <!-- Use placeholder image if no profile picture path available -->
+        <h2>${user.username}</h2>
+        <p>Gender: ${user.gender}</p>
+        <p>Age: ${user.age}</p>
+        <p>Location: ${user.location}</p>
+        <button id="likeButton">Like</button>
+        <button id="passButton">Pass</button>
+    `;
+    cardContainer.appendChild(card);
+
+    // Add event listeners to the buttons
+    const likeButton = card.querySelector('#likeButton');
+    likeButton.addEventListener('click', () => handleLike(user.userID));
+
+    const passButton = card.querySelector('#passButton');
+    passButton.addEventListener('click', handlePass);
+}
+            
+            // Handle like button click event
+            async function handleLike(userId) {
+                const likerId = sessionStorage.getItem('userID');
+    
+                if (!likerId) {
+                    console.error('User not authenticated');
+                    alert('User not authenticated. Please sign in again.');
+                    return;
+                }
+    
+                const user = userData[currentUserIndex];
+                const likedId = user.userID;
+
+                console.log('Liker ID:', likerId);
+                console.log('Liked ID:', likedId);
+    
+                try {
+                    const response = await fetch('/api/like', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ likerId, likedId })
+                    });
+    
+                    if (!response.ok) {
+                        throw new Error('Failed to like user');
+                    }
+    
+                    const responseData = await response.json();
+    
+                    if (responseData.success) {
+                        if (responseData.likedBack) { // Check if the user liked back
+                            alert('You liked someone and they liked you back!');
+                        } else {
+                            alert('You liked someone!');
+                        }
+                        console.log('Liked');
+                    } else {
+                        console.error('Failed to like user:', responseData.error);
+                        alert('Failed to like user. Please try again later.');
+                    }
+                } catch (error) {
+                    console.error('Error liking user:', error);
+                    alert('Error liking user. Please check your internet connection and try again.');
+                }
+
+                sessionStorage.setItem(`likedOrPassed_${likerId}_${user.userID}`, true);
+    
+                // Remove current user from userData array and render next user
+                userData.splice(currentUserIndex, 1);
+                if (userData.length > 0) {
+                    renderUserCard();
+                } else {
+                    document.getElementById('card-container').textContent = 'No more users to display.';
+                }
+            }
+    
+            // Handle pass button click event
+            function handlePass() {
+                console.log("handlePass function called.");
+
+                const likerId = sessionStorage.getItem('userID');
+                if (!likerId) {
+                    console.error('User not authenticated');
+                    alert('User not authenticated. Please sign in again.');
+                    return;
+                }
+
+                const user = userData[currentUserIndex];
+
+                sessionStorage.setItem(`likedOrPassed_${likerId}_${user.userID}`, true);
+
+                // Remove current user from userData array and render next user
+                userData.splice(currentUserIndex, 1);
+                if (userData.length > 0) {
+                    renderUserCard();
+                } else {
+                    document.getElementById('card-container').textContent = 'No more users to display.';
+                }
+            }
+        }); // <- Added closing curly brace for the event listener
+    </script>    
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>User Profile</h1>
+    </header>
+    <div id="greeting"></div>
+    <main>
+        <form id="profile-form" enctype="multipart/form-data"> <!-- Add enctype attribute for file upload -->
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+            <label for="bio">Bio:</label>
+            <textarea id="bio" name="bio"></textarea>
+            <label for="image">Profile Image:</label>
+            <input type="file" id="image" name="image">
+            <button type="submit">Save</button>
+        </form>
+        <!-- Button to navigate to connectnest.html -->
+        <button id="go-to-connectnest">Go to ConnectNest</button>
+    </main>
+    <footer>
+        <p>&copy; 2024 ConnectNest</p>
+    </footer>
+
+    <!-- JavaScript code to handle form submission and navigation -->
+    <script>
+        document.getElementById('profile-form').addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent form submission
+
+            const greetingElement = document.getElementById('greeting');
+            greetingElement.textContent = `Hello, ${sessionStorage.getItem('username') || 'Guest'}!`;
+
+            const username = document.getElementById('username').value;
+            const bio = document.getElementById('bio').value;
+            const image = document.getElementById('image').files[0]; // Get the selected image file
+
+            // Validation: You can add client-side validation here if needed
+
+            // Create a FormData object to send form data
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('bio', bio);
+            formData.append('image', image);
+
+            try {
+                const response = await fetch('/api/profile', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    window.location.href = 'connectnest.html'; // Redirect to connectnest.html after profile update
+                } else {
+                    // Handle error response
+                    console.error('Error updating profile:', response.statusText);
+                    alert('Failed to update profile. Please try again later.');
+                }
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                alert('Error updating profile. Please check your internet connection and try again.');
+            }
+        });
+
+        // Event listener for the "Go to ConnectNest" button
+        document.getElementById('go-to-connectnest').addEventListener('click', () => {
+            window.location.href = 'connectnest.html'; // Navigate to connectnest.html
+        });
+    </script>
+</body>
+</html>

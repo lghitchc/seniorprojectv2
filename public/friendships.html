@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConnectNest - Friendships</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Friendships on ConnectNest</h1>
+    </header>
+    <div id="greeting"></div>
+    <main id="friendship-list">
+        <!-- Friendships will be dynamically added here -->
+    </main>
+    <footer>
+        <a href="connectnest.html">Back to ConnectNest</a>
+    </footer>
+
+    <!-- JavaScript code to fetch and display friendships -->
+    <script>
+        document.addEventListener('DOMContentLoaded', fetchFriendships);
+
+        const greetingElement = document.getElementById('greeting');
+        greetingElement.textContent = `Hello, ${sessionStorage.getItem('username') || 'Guest'}!`;
+        async function fetchFriendships() {
+            try {
+                // Fetch the user ID from the session
+                const userId = sessionStorage.getItem('userID');
+
+                if (!userId) {
+                    // If user ID is not available, display an error message
+                    document.getElementById('friendship-list').textContent = 'User ID not found in session.';
+                    return;
+                }
+
+                // Fetch user friendships from the server using the user ID
+                const response = await fetch(`/api/friendships/${userId}`);
+                const jsonData = await response.json();
+
+                if (jsonData.success) {
+                    const friendships = jsonData.friendships;
+                    renderFriendships(friendships); // Render friendships on the page
+                } else {
+                    console.error('Error fetching friendships:', jsonData.error);
+                    // Display error message to the user
+                    document.getElementById('friendship-list').textContent = 'Error fetching friendships. Please try again later.';
+                }
+            } catch (error) {
+                console.error('Error fetching friendships:', error);
+                // Display error message to the user
+                document.getElementById('friendship-list').textContent = 'Error fetching friendships. Please check your internet connection and try again.';
+            }
+        }
+
+        function renderFriendships(friendships) {
+    const friendshipList = document.getElementById('friendship-list');
+
+    // Clear previous content
+    friendshipList.innerHTML = '';
+
+    if (friendships.length === 0) {
+        // Display message if there are no friendships
+        friendshipList.textContent = 'You have no friendships yet.';
+    } else {
+        // Filter out current user's data from friendships
+        const filteredFriendships = friendships.filter(friendship => friendship.Username !== sessionStorage.getItem('username'));
+
+        if (filteredFriendships.length === 0) {
+            // If after filtering, there are no friendships, display message
+            friendshipList.textContent = 'You have no friendships yet with other users.';
+        } else {
+            // Loop through filtered friendships and create HTML elements for each
+            filteredFriendships.forEach(friendship => {
+                const friendshipItem = document.createElement('div');
+                friendshipItem.classList.add('friendship-item');
+                friendshipItem.innerHTML = `
+                    <p><strong>Friend:</strong> ${friendship.Username}</p>
+                    <p><strong>Age:</strong> ${friendship.Age}</p>
+                    <p><strong>Location:</strong> ${friendship.Location}</p>
+                    <p><strong>Gender:</strong> ${friendship.Gender}</p>
+                    <p><strong>Status:</strong> ${friendship.Status}</p>
+                    <button class="message-button">Send Message</button>
+                `;
+                friendshipList.appendChild(friendshipItem);
+            });
+
+            // Add event listeners to message buttons
+            const messageButtons = document.querySelectorAll('.message-button');
+            messageButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Get the friend's username from the friendship item
+                    const friendUsername = button.parentElement.querySelector('p:first-child').textContent.split(': ')[1];
+                    // Redirect to messages.html passing both sender and friend's username as query parameters
+                    const senderUsername = sessionStorage.getItem('username') || 'Guest';
+                    const queryParams = new URLSearchParams({
+                        sender: senderUsername,
+                        friend: friendUsername
+                    });
+                    window.location.href = `messages.html?sender=${encodeURIComponent(senderUsername)}&friend=${encodeURIComponent(friendUsername)}`;
+                });
+            });
+        }
+    }
+}
+    </script>
+</body>
+</html>

@@ -1,0 +1,147 @@
+/* styles.css */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4; /* Light gray background */
+}
+
+header {
+    background-color: #4CAF50; /* Green */
+    color: #fff;
+    padding: 20px;
+    text-align: center;
+    border-bottom: 5px solid #388E3C; /* Darker shade of green */
+}
+
+main {
+    padding: 20px;
+    text-align: center;
+}
+
+#chat {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Soft shadow */
+}
+
+#messages {
+    list-style-type: none;
+    padding: 0;
+}
+
+#messages li {
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: #f9f9f9; /* Light gray background for messages */
+    border-radius: 5px;
+}
+
+#messages li:nth-child(even) {
+    background-color: #e5e5e5; /* Alternate background color for even messages */
+}
+
+#messageInput {
+    width: calc(100% - 80px); /* Adjusting input width */
+    padding: 10px;
+    margin-right: 10px;
+    border: 1px solid #ccc; /* Light gray border */
+    border-radius: 5px;
+}
+
+#sendButton {
+    padding: 12px 20px;
+    background-color: #4CAF50; /* Green */
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease; /* Smooth color transition */
+}
+
+#sendButton:hover {
+    background-color: #45a049; /* Darker shade of green on hover */
+}
+
+a {
+    color: inherit; /* Set the color to inherit from its parent */
+    text-decoration: underline;
+}
+
+
+a:hover {
+    color: inherit; /* Ensure hover color remains same as default color */
+}
+
+
+footer {
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    padding: 5px; /* Reduced padding */
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    font-size: 14px; /* Reduced font size */
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #fff; /* White background for form */
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow */
+}
+
+label {
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #333; /* Dark gray text color */
+}
+
+input, select {
+    margin-bottom: 20px;
+    padding: 10px;
+    width: 300px;
+    border: 1px solid #ccc; /* Light gray border */
+    border-radius: 5px;
+}
+
+button {
+    padding: 12px 24px;
+    margin-top: 20px;
+    background-color: #4CAF50; /* Green */
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease; /* Smooth color transition */
+}
+
+button:hover {
+    background-color: #45a049; /* Darker shade of green on hover */
+}
+
+.card {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 350px;
+    margin-bottom: 20px;
+}
+
+.card img {
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 5px; /* Rounded corners for images */
+}
