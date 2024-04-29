@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql2/promise'); // Modified import to use promise API
+const mariadb = require('mariadb'); // Modified import to use promise API
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const session = require('express-session');
@@ -7,27 +7,12 @@ const fs = require('fs');
 const multer = require('multer'); // For handling file uploads
 const path = require('path');
 
-// MariaDB connection
-const pool = mysql.createPool({
-  user: 'root',
-  host: '127.0.0.1',
-  database: 'connectnest',
-  password: process.env.DB_PASSWORD, // password in environment variable
-  port: 3306,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-});
-
-// Removed the promise() call as mysql2 now supports promises by default
-// No need for promisePool, using pool directly
-
 // Express
 const app = express();
 
 // Enable CORS
 app.use(cors());
-app.options('/api/users', cors());
+// app.options('/api/users', cors());
 
 // Static files
 app.use(express.static('public'));
@@ -55,6 +40,75 @@ app.use(session({
   resave: false,
   saveUninitialized: false
 }));
+
+// Amazon RDS Connection
+const pool = mariadb.createPool({
+  user: process.env.RDS_USERNAME, // RDS username
+  host: process.env.RDS_HOSTNAME, // RDS endpoint
+  database: process.env.RDS_DB_NAME, // RDS database name
+  password: process.env.RDS_PASSWORD, // RDS password
+  port: process.env.RDS_PORT, // RDS port
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+});
+
+// Test the connection
+pool.getConnection((err, connection) => {
+  if (err) {
+    console.error('Database connection failed:', err);
+  } else {
+    console.log('Connected to the database!');
+    connection.release();
+  }
+});
+
+// Removed the promise() call as mysql2 now supports promises by default
+// No need for promisePool, using pool directly
+
+// Define API endpoint to create a new user
+app.post('/api/signup', upload.single('image'), async (req, res) => {
+  const { username, email, password, age, gender, location } = req.body;
+  const image = req.file ? req.file.path : null; // Store image path if uploaded
+
+  try {
+    // Insert new user into the database
+    const [userResult] = await pool.query('INSERT INTO Users (Username, Email, Password, Age, Gender, Location) VALUES (?, ?, ?, ?, ?, ?) RETURNING UserID',
+      [username, email, password, age, gender, location]);
+
+    const userId = userResult.insertId;
+
+    // Insert image data into the Images table
+    if (image) {
+      try {
+        // Read the file synchronously
+        const data = fs.readFileSync(image);
+
+        // Insert image data into the Images table
+        const [imageResult] = await pool.query('INSERT INTO Images (ImageData, user_id) VALUES (?, ?)', [data, userId]);
+        console.log('Image ID:', imageResult.insertId);
+        const imageId = imageResult.insertId;
+
+        // Update the Users table with the image ID
+        await pool.query('UPDATE Users SET ImageID = ? WHERE UserID = ?', [imageId, userId]);
+
+        // Redirect to connectnest.html upon successful account creation
+        res.redirect('https://seniorprojectv2.vercel.app/connectnest.html');
+      } catch (err) {
+        console.error('Error creating account', err);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+      }
+    } else {
+      // Redirect to connectnest.html upon successful account creation
+      res.redirect('https://seniorprojectv2.vercel.app/connectnest.html');
+    }
+
+
+  } catch (err) {
+    console.error('Error creating account', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
 
 // Define API endpoint to authenticate user
 app.post('/api/login', async (req, res) => {
@@ -163,49 +217,6 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-// Define API endpoint to create a new user
-app.post('/api/signup', upload.single('image'), async (req, res) => {
-  const { username, email, password, age, gender, location } = req.body;
-  const image = req.file ? req.file.path : null; // Store image path if uploaded
-
-  try {
-    // Insert new user into the database
-    const [userResult] = await pool.query('INSERT INTO Users (Username, Email, Password, Age, Gender, Location) VALUES (?, ?, ?, ?, ?, ?) RETURNING UserID',
-      [username, email, password, age, gender, location]);
-
-    const userId = userResult.insertId;
-
-    // Insert image data into the Images table
-    if (image) {
-      try {
-        // Read the file synchronously
-        const data = fs.readFileSync(image);
-
-        // Insert image data into the Images table
-        const [imageResult] = await pool.query('INSERT INTO Images (ImageData, user_id) VALUES (?, ?)', [data, userId]);
-        console.log('Image ID:', imageResult.insertId);
-        const imageId = imageResult.insertId;
-
-        // Update the Users table with the image ID
-        await pool.query('UPDATE Users SET ImageID = ? WHERE UserID = ?', [imageId, userId]);
-
-        // Redirect to connectnest.html upon successful account creation
-        res.redirect('/connectnest.html');
-      } catch (err) {
-        console.error('Error creating account', err);
-        res.status(500).json({ success: false, error: 'Internal server error' });
-      }
-    } else {
-      // Redirect to connectnest.html upon successful account creation
-      res.redirect('/connectnest.html');
-    }
-
-
-  } catch (err) {
-    console.error('Error creating account', err);
-    res.status(500).json({ success: false, error: 'Internal server error' });
-  }
-});
 
 // Define API endpoint to handle liking a user
 app.post('/api/like', async (req, res) => {

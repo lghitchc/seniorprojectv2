@@ -36,7 +36,7 @@
                 }
 
                 // Fetch user friendships from the server using the user ID
-                const response = await fetch(`/api/friendships/${userId}`);
+                const response = await fetch(`https://seniorprojectv2.vercel.app/api/friendships/${userId}`);
                 const jsonData = await response.json();
 
                 if (jsonData.success) {
