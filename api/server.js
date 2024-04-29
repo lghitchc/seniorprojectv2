@@ -12,6 +12,7 @@ const app = express();
 
 // Enable CORS
 app.use(cors());
+app.options('/api/users', cors());
 
 // Static files
 app.use(express.static('public'));
