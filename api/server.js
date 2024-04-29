@@ -1,55 +1,10 @@
-const express = require('express');
+// Import necessary modules
 const mariadb = require('mariadb'); // Modified import to use promise API
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const session = require('express-session');
 const fs = require('fs');
-const multer = require('multer'); // For handling file uploads
 const path = require('path');
-
-// Express
-const app = express();
-
-// Enable CORS
-app.use(cors({
-  origin: [
-    'https://seniorprojectv2.vercel.app/connectnest.html',
-    'https://seniorprojectv2.vercel.app/signup.html',
-    'https://seniorprojectv2.vercel.app/signin.html',
-    'https://seniorprojectv2.vercel.app/profile.html',
-    'https://seniorprojectv2.vercel.app/friendships.html',
-    'https://seniorprojectv2.vercel.app/messages.html',
-    'https://seniorprojectv2.vercel.app/index.html'
-  ]
-}));
-app.options('*', cors());
-
-// Static files
-app.use(express.static('public'));
-
-// Define storage settings for multer
-const storage = multer.diskStorage({
-  destination: 'uploads/', // Specify the directory for storing uploaded files
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const originalName = path.basename(file.originalname, path.extname(file.originalname)); // Remove extension
-    const ext = path.extname(file.originalname);
-    cb(null, `${originalName}-${uniqueSuffix}${ext}`);
-  }
-});
-
-// Initialize multer with custom storage settings
-const upload = multer({ storage: storage });
-
-// Parse JSON
-app.use(bodyParser.json());
-
-// Initialize session middleware
-app.use(session({
-  secret: process.env.SECRET_SESSION_KEY, // Set your secret key for session encryption
-  resave: false,
-  saveUninitialized: false
-}));
+const multer = require('multer');
+const multerS3 = require('multer-s3');
+const aws = require('aws-sdk');
 
 // Amazon RDS Connection
 const pool = mariadb.createPool({
@@ -74,13 +29,35 @@ pool.getConnection((err, connection) => {
   }
 });
 
-// Removed the promise() call as mysql2 now supports promises by default
-// No need for promisePool, using pool directly
+// Configure AWS SDK with your credentials
+aws.config.update({
+  accessKeyId: process.env.YOUR_ACCESS_KEY_ID,
+  secretAccessKey: process.env.YOUR_SECRET_ACCESS_KEY,
+});
 
-// Define API endpoint to create a new user
-app.post('/api/signup', upload.single('image'), async (req, res) => {
+// Create an S3 instance
+const s3 = new aws.S3();
+
+// Configure multer storage to upload files to S3
+const upload = multer({
+  storage: multerS3({
+    s3: s3,
+    bucket: 'connectnestbucket',
+    acl: 'public-read', // Set ACL permissions for uploaded files
+    contentType: multerS3.AUTO_CONTENT_TYPE, // Set content type automatically based on file MIME type
+    metadata: function (req, file, cb) {
+      cb(null, {fieldName: file.fieldname}); // Add metadata to the uploaded file
+    },
+    key: function (req, file, cb) {
+      cb(null, Date.now().toString() + '-' + file.originalname); // Set the key (file name) in S3 bucket
+    }
+  })
+});
+
+// Define the serverless function for handling the '/api/signup' endpoint
+exports.signup = async (req, res) => {
   const { username, email, password, age, gender, location } = req.body;
-  const image = req.file ? req.file.path : null; // Store image path if uploaded
+  const image = req.file ? req.file.location : null; // Store image path if uploaded
 
   try {
     // Insert new user into the database
@@ -113,16 +90,14 @@ app.post('/api/signup', upload.single('image'), async (req, res) => {
       // Redirect to connectnest.html upon successful account creation
       res.redirect('https://seniorprojectv2.vercel.app/connectnest.html');
     }
-
-
   } catch (err) {
     console.error('Error creating account', err);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
-});
+};
 
-// Define API endpoint to authenticate user
-app.post('/api/login', async (req, res) => {
+// Define the serverless function for handling the '/api/login' endpoint
+exports.login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -141,13 +116,13 @@ app.post('/api/login', async (req, res) => {
     console.error('Error authenticating user', err);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
-});
+};
 
-// Define API endpoint to handle profile update
-app.post('/api/profile', upload.single('image'), async (req, res) => {
+// Define the serverless function for handling the '/api/profile' endpoint
+exports.profile = async (req, res) => {
   console.log('Uploaded file:', req.file); // Log uploaded file
   const { username, bio } = req.body;
-  let image = req.file ? req.file.path : null; // Store image path if uploaded
+  let image = req.file ? req.file.location : null; // Store image path if uploaded
 
   try {
     // If an image is uploaded, process it
@@ -186,10 +161,10 @@ app.post('/api/profile', upload.single('image'), async (req, res) => {
     console.error('Error updating profile:', err);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
-});
+};
 
-// Define API endpoint to fetch users with images
-app.get('/api/users', async (req, res) => {
+// Define the serverless function for handling the '/api/users' endpoint
+exports.users = async (req, res) => {
   try {
       const loggedInUserId = req.session.userID;
 
@@ -226,11 +201,10 @@ app.get('/api/users', async (req, res) => {
       console.error('Error fetching users', err);
       res.status(500).json({ error: 'Internal server error' });
   }
-});
+};
 
-
-// Define API endpoint to handle liking a user
-app.post('/api/like', async (req, res) => {
+// Define the serverless function for handling the '/api/like' endpoint
+exports.like = async (req, res) => {
   const { likerId, likedId } = req.body;
 
   try {
@@ -266,10 +240,10 @@ app.post('/api/like', async (req, res) => {
     console.error('Error liking user:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
-});
+};
 
-// Define API endpoint to fetch user friendships
-app.get('/api/friendships/:userId', async (req, res) => {
+// Define the serverless function for handling the '/api/friendships/:userId' endpoint
+exports.friendships = async (req, res) => {
   const userId = req.params.userId;
 
   try {
@@ -284,10 +258,10 @@ app.get('/api/friendships/:userId', async (req, res) => {
     console.error('Error fetching user friendships:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
-});
+};
 
-// Define API endpoint to fetch sender ID
-app.get('/api/get-sender-id', async (req, res) => {
+// Define the serverless function for handling the '/api/get-sender-id' endpoint
+exports.getSenderId = async (req, res) => {
   const { username } = req.query;
   if (!username) {
     res.status(400).json({ success: false, error: 'Username is required' });
@@ -307,10 +281,10 @@ app.get('/api/get-sender-id', async (req, res) => {
     console.error('Error fetching sender ID:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
-});
+};
 
-// Define API endpoint to fetch receiver ID
-app.get('/api/get-receiver-id', async (req, res) => {
+// Define the serverless function for handling the '/api/get-receiver-id' endpoint
+exports.getReceiverId = async (req, res) => {
   const { receiverUsername } = req.query; // Change parameter name to receiverUsername
   console.log('Received receiverUsername:', receiverUsername);
   if (!receiverUsername) {
@@ -333,11 +307,10 @@ app.get('/api/get-receiver-id', async (req, res) => {
     console.error('Error fetching receiver ID:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
-});
+};
 
-// Define API endpoint to send a message
-app.post('/api/send-message', async (req, res) => {
-
+// Define the serverless function for handling the '/api/send-message' endpoint
+exports.sendMessage = async (req, res) => {
   const { senderUsername, receiverUsername, content } = req.body;
   const loggedInUser = req.session.username; // Retrieve username from session
   const senderId = req.session.userID; // Retrieve userID from session
@@ -381,11 +354,10 @@ app.post('/api/send-message', async (req, res) => {
     console.error('Error sending message:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
-});
+};
 
-
-// Define API endpoint to fetch messages between two users
-app.get('/api/messages', async (req, res) => {
+// Define the serverless function for handling the '/api/messages' endpoint
+exports.messages = async (req, res) => {
   const { senderUsername, receiverUsername } = req.query;
 
   try {
@@ -403,17 +375,10 @@ app.get('/api/messages', async (req, res) => {
     console.error('Error fetching messages:', error);
     res.status(500).json({ success: false, error: 'Internal server error' });
   }
-});
+};
 
-
-// Define API endpoint to logout user
-app.post('/api/logout', (req, res) => {
+// Define the serverless function for handling the '/api/logout' endpoint
+exports.logout = async (req, res) => {
   req.session.destroy(); // Destroy session on logout
   res.status(200).json({ success: true, message: 'Logout successful' });
-});
-
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+};
