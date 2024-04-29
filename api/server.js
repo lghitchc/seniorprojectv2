@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql2/promise'); // Modified import to use promise API
+const mariadb = require('mariadb'); // Modified import to use promise API
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const session = require('express-session');
@@ -12,7 +12,7 @@ const app = express();
 
 // Enable CORS
 app.use(cors());
-app.options('/api/users', cors());
+// app.options('/api/users', cors());
 
 // Static files
 app.use(express.static('public'));
@@ -42,15 +42,15 @@ app.use(session({
 }));
 
 // Amazon RDS Connection
-const pool = mysql.createPool({
+const pool = mariadb.createPool({
   user: process.env.RDS_USERNAME, // RDS username
   host: process.env.RDS_HOSTNAME, // RDS endpoint
   database: process.env.RDS_DB_NAME, // RDS database name
   password: process.env.RDS_PASSWORD, // RDS password
-  port: process.env.RDS_PORT, // RDS port, usually 3306
+  port: process.env.RDS_PORT, // RDS port
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0
+  queueLimit: 0,
 });
 
 // Test the connection
@@ -216,6 +216,7 @@ app.get('/api/users', async (req, res) => {
       res.status(500).json({ error: 'Internal server error' });
   }
 });
+
 
 // Define API endpoint to handle liking a user
 app.post('/api/like', async (req, res) => {
@@ -401,7 +402,7 @@ app.post('/api/logout', (req, res) => {
 });
 
 // Start server
-const PORT = process.env.RDS_PORT || 3050;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
