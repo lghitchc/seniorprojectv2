@@ -51,6 +51,7 @@ const pool = mariadb.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  connectTimeout: 30000
 });
 
 // Test the connection
