@@ -200,14 +200,14 @@ app.post('/api/signup', upload.single('image'), async (req, res) => {
         await pool.query('UPDATE Users SET ImageID = ? WHERE UserID = ?', [imageId, userId]);
 
         // Redirect to connectnest.html upon successful account creation
-        res.redirect('/connectnest.html');
+        res.redirect('https://seniorprojectv2.vercel.app/connectnest.html');
       } catch (err) {
         console.error('Error creating account', err);
         res.status(500).json({ success: false, error: 'Internal server error' });
       }
     } else {
       // Redirect to connectnest.html upon successful account creation
-      res.redirect('/connectnest.html');
+      res.redirect('https://seniorprojectv2.vercel.app/connectnest.html');
     }
 
 
