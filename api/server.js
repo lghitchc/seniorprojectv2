@@ -22,7 +22,7 @@ app.use(cors({
     'https://seniorprojectv2.vercel.app/index.html'
   ]
 }));
-// app.options('/api/users', cors());
+app.options('*', cors());
 
 // Static files
 app.use(express.static('public'));
