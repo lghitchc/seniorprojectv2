@@ -66,6 +66,49 @@ pool.getConnection((err, connection) => {
 // Removed the promise() call as mysql2 now supports promises by default
 // No need for promisePool, using pool directly
 
+// Define API endpoint to create a new user
+app.post('/api/signup', upload.single('image'), async (req, res) => {
+  const { username, email, password, age, gender, location } = req.body;
+  const image = req.file ? req.file.path : null; // Store image path if uploaded
+
+  try {
+    // Insert new user into the database
+    const [userResult] = await pool.query('INSERT INTO Users (Username, Email, Password, Age, Gender, Location) VALUES (?, ?, ?, ?, ?, ?) RETURNING UserID',
+      [username, email, password, age, gender, location]);
+
+    const userId = userResult.insertId;
+
+    // Insert image data into the Images table
+    if (image) {
+      try {
+        // Read the file synchronously
+        const data = fs.readFileSync(image);
+
+        // Insert image data into the Images table
+        const [imageResult] = await pool.query('INSERT INTO Images (ImageData, user_id) VALUES (?, ?)', [data, userId]);
+        console.log('Image ID:', imageResult.insertId);
+        const imageId = imageResult.insertId;
+
+        // Update the Users table with the image ID
+        await pool.query('UPDATE Users SET ImageID = ? WHERE UserID = ?', [imageId, userId]);
+
+        // Redirect to connectnest.html upon successful account creation
+        res.redirect('https://seniorprojectv2.vercel.app/connectnest.html');
+      } catch (err) {
+        console.error('Error creating account', err);
+        res.status(500).json({ success: false, error: 'Internal server error' });
+      }
+    } else {
+      // Redirect to connectnest.html upon successful account creation
+      res.redirect('https://seniorprojectv2.vercel.app/connectnest.html');
+    }
+
+
+  } catch (err) {
+    console.error('Error creating account', err);
+    res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
 
 // Define API endpoint to authenticate user
 app.post('/api/login', async (req, res) => {
@@ -171,50 +214,6 @@ app.get('/api/users', async (req, res) => {
   } catch (err) {
       console.error('Error fetching users', err);
       res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Define API endpoint to create a new user
-app.post('/api/signup', upload.single('image'), async (req, res) => {
-  const { username, email, password, age, gender, location } = req.body;
-  const image = req.file ? req.file.path : null; // Store image path if uploaded
-
-  try {
-    // Insert new user into the database
-    const [userResult] = await pool.query('INSERT INTO Users (Username, Email, Password, Age, Gender, Location) VALUES (?, ?, ?, ?, ?, ?) RETURNING UserID',
-      [username, email, password, age, gender, location]);
-
-    const userId = userResult.insertId;
-
-    // Insert image data into the Images table
-    if (image) {
-      try {
-        // Read the file synchronously
-        const data = fs.readFileSync(image);
-
-        // Insert image data into the Images table
-        const [imageResult] = await pool.query('INSERT INTO Images (ImageData, user_id) VALUES (?, ?)', [data, userId]);
-        console.log('Image ID:', imageResult.insertId);
-        const imageId = imageResult.insertId;
-
-        // Update the Users table with the image ID
-        await pool.query('UPDATE Users SET ImageID = ? WHERE UserID = ?', [imageId, userId]);
-
-        // Redirect to connectnest.html upon successful account creation
-        res.redirect('https://seniorprojectv2.vercel.app/connectnest.html');
-      } catch (err) {
-        console.error('Error creating account', err);
-        res.status(500).json({ success: false, error: 'Internal server error' });
-      }
-    } else {
-      // Redirect to connectnest.html upon successful account creation
-      res.redirect('https://seniorprojectv2.vercel.app/connectnest.html');
-    }
-
-
-  } catch (err) {
-    console.error('Error creating account', err);
-    res.status(500).json({ success: false, error: 'Internal server error' });
   }
 });
 
