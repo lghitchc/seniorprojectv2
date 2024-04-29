@@ -11,7 +11,17 @@ const path = require('path');
 const app = express();
 
 // Enable CORS
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://seniorprojectv2.vercel.app/connectnest.html',
+    'https://seniorprojectv2.vercel.app/signup.html',
+    'https://seniorprojectv2.vercel.app/signin.html',
+    'https://seniorprojectv2.vercel.app/profile.html',
+    'https://seniorprojectv2.vercel.app/friendships.html',
+    'https://seniorprojectv2.vercel.app/messages.html',
+    'https://seniorprojectv2.vercel.app/index.html'
+  ]
+}));
 // app.options('/api/users', cors());
 
 // Static files
