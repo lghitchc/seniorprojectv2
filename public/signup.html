@@ -39,6 +39,7 @@
         <p>&copy; 2024 ConnectNest</p>
     </footer>
     <script>
+        console.log('Hello');
         document.getElementById('signup-form').addEventListener('submit', async (event) => {
             event.preventDefault(); // Prevent form submission
 
@@ -71,7 +72,11 @@
             try {
                 const response = await fetch('https://seniorprojectv2.vercel.app/api/signup', {
                     method: 'POST',
+<<<<<<< HEAD
                     mode: 'no-cors', //added for vercel
+=======
+                    mode: 'no-cors',
+>>>>>>> 82347b93ffea1408051861fe0a98362ea7f18b9d
                     body: formData
                 });
 
