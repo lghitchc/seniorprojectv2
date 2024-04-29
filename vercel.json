@@ -1,18 +1,5 @@
 {
-<<<<<<< HEAD
-    "version": 2,
-    "functions": { "api/**/*.js": { "runtime": "@vercel/node" } },
-    "rewrites": [
-      {
-        "source": "/(.*)",
-        "destination": "/api"
-      }
-    ]
-  }
-  
-=======
   "version": 2,
-  "functions": { "api/**/*.js": { "runtime": "@vercel/node" } },
   "rewrites": [
     {
       "source": "/(.*)",
@@ -20,4 +7,4 @@
     }
   ]
 }
->>>>>>> 82347b93ffea1408051861fe0a98362ea7f18b9d
+
