@@ -7,16 +7,26 @@ const fs = require('fs');
 const multer = require('multer'); // For handling file uploads
 const path = require('path');
 
-// MariaDB connection
+// Amazon RDS Connection
 const pool = mysql.createPool({
-  user: 'root',
-  host: '127.0.0.1',
-  database: 'connectnest',
-  password: process.env.DB_PASSWORD, // password in environment variable
-  port: 3306,
+  user: process.env.RDS_USERNAME, // RDS username
+  host: process.env.RDS_HOSTNAME, // RDS endpoint
+  database: process.env.RDS_DB_NAME, // RDS database name
+  password: process.env.RDS_PASSWORD, // RDS password
+  port: process.env.RDS_PORT, // RDS port, usually 3306
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
+});
+
+// Test the connection
+pool.getConnection((err, connection) => {
+  if (err) {
+    console.error('Database connection failed:', err);
+  } else {
+    console.log('Connected to the database!');
+    connection.release();
+  }
 });
 
 // Removed the promise() call as mysql2 now supports promises by default
